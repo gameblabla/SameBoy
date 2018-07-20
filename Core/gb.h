@@ -9,14 +9,12 @@
 
 #include "apu.h"
 #include "camera.h"
-#include "debugger.h"
 #include "display.h"
 #include "joypad.h"
 #include "mbc.h"
 #include "memory.h"
 #include "printer.h"
 #include "timing.h"
-#include "rewind.h"
 #include "z80_cpu.h"
 #include "symbol_hash.h"
 
@@ -199,7 +197,7 @@ typedef enum {
 typedef void (*GB_vblank_callback_t)(GB_gameboy_t *gb);
 typedef void (*GB_log_callback_t)(GB_gameboy_t *gb, const char *string, GB_log_attributes attributes);
 typedef char *(*GB_input_callback_t)(GB_gameboy_t *gb);
-typedef uint32_t (*GB_rgb_encode_callback_t)(GB_gameboy_t *gb, uint8_t r, uint8_t g, uint8_t b);
+typedef uint16_t (*GB_rgb_encode_callback_t)(GB_gameboy_t *gb, uint8_t r, uint8_t g, uint8_t b);
 typedef void (*GB_infrared_callback_t)(GB_gameboy_t *gb, bool on, long cycles_since_last_update);
 typedef void (*GB_rumble_callback_t)(GB_gameboy_t *gb, bool rumble_on);
 typedef void (*GB_serial_transfer_start_callback_t)(GB_gameboy_t *gb, uint8_t byte_to_send);
@@ -472,7 +470,7 @@ struct GB_gameboy_internal_s {
         uint8_t *mbc_ram;
 
         /* I/O */
-        uint32_t *screen;
+        uint16_t *screen;
         uint32_t background_palettes_rgb[0x20];
         uint32_t sprite_palettes_rgb[0x20];
         GB_color_correction_mode_t color_correction_mode;
@@ -622,13 +620,12 @@ void GB_set_rendering_disabled(GB_gameboy_t *gb, bool disabled);
 void GB_log(GB_gameboy_t *gb, const char *fmt, ...) __printflike(2, 3);
 void GB_attributed_log(GB_gameboy_t *gb, GB_log_attributes attributes, const char *fmt, ...) __printflike(3, 4);
 
-void GB_set_pixels_output(GB_gameboy_t *gb, uint32_t *output);
+void GB_set_pixels_output(GB_gameboy_t *gb, uint16_t *output);
 
 void GB_set_infrared_input(GB_gameboy_t *gb, bool state);
 void GB_queue_infrared_input(GB_gameboy_t *gb, bool state, long cycles_after_previous_change); /* In 8MHz units*/
     
 void GB_set_vblank_callback(GB_gameboy_t *gb, GB_vblank_callback_t callback);
-void GB_set_log_callback(GB_gameboy_t *gb, GB_log_callback_t callback);
 void GB_set_input_callback(GB_gameboy_t *gb, GB_input_callback_t callback);
 void GB_set_async_input_callback(GB_gameboy_t *gb, GB_input_callback_t callback);
 void GB_set_rgb_encode_callback(GB_gameboy_t *gb, GB_rgb_encode_callback_t callback);

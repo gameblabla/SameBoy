@@ -1,4 +1,4 @@
-#include <SDL2/SDL.h>
+#include <SDL/SDL.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -8,13 +8,8 @@
 #include "gui.h"
 #include "font.h"
 
-static const SDL_Color gui_palette[4] = {{8, 24, 16,}, {57, 97, 57,}, {132, 165, 99}, {198, 222, 140}};
-static uint32_t gui_palette_native[4];
 
-SDL_Window *window = NULL;
-SDL_Renderer *renderer = NULL;
-SDL_Texture *texture = NULL;
-SDL_PixelFormat *pixel_format = NULL;
+SDL_Surface* screen;
 enum pending_command pending_command;
 unsigned command_parameter;
 
@@ -24,66 +19,34 @@ unsigned command_parameter;
 #define MODIFIER_NAME CTRL_STRING
 #endif
 
-shader_t shader;
 SDL_Rect rect;
 
 void render_texture(void *pixels,  void *previous)
 {
-    if (renderer) {
-        if (pixels) {
-            SDL_UpdateTexture(texture, NULL, pixels, 160 * sizeof (uint32_t));
-        }
-        SDL_RenderClear(renderer);
-        SDL_RenderCopy(renderer, texture, NULL, NULL);
-        SDL_RenderPresent(renderer);
-    }
-    else {
-        static void *_pixels = NULL;
-        if (pixels) {
-            _pixels = pixels;
-        }
-        glClearColor(0, 0, 0, 1);
-        glClear(GL_COLOR_BUFFER_BIT);
-        render_bitmap_with_shader(&shader, _pixels, previous, rect.x, rect.y, rect.w, rect.h);
-        SDL_GL_SwapWindow(window);
-    }
+	SDL_LockSurface(screen);
+    memcpy(screen->pixels, pixels, (160 * 144) * sizeof (uint16_t));
+    SDL_UnlockSurface(screen);
+    SDL_Flip(screen);
 }
 
 configuration_t configuration =
 {
     .keys = {
-        SDL_SCANCODE_RIGHT,
-        SDL_SCANCODE_LEFT,
-        SDL_SCANCODE_UP,
-        SDL_SCANCODE_DOWN,
-        SDL_SCANCODE_X,
-        SDL_SCANCODE_Z,
-        SDL_SCANCODE_BACKSPACE,
-        SDL_SCANCODE_RETURN,
-        SDL_SCANCODE_SPACE
+        SDLK_RIGHT,
+        SDLK_LEFT,
+        SDLK_UP,
+        SDLK_DOWN,
+        SDLK_LCTRL,
+        SDLK_LALT,
+        SDLK_BACKSPACE,
+        SDLK_RETURN,
+        SDLK_SPACE
     },
     .keys_2 = {
-        SDL_SCANCODE_TAB,
-        SDL_SCANCODE_LSHIFT,
+        SDLK_TAB,
+        SDLK_LSHIFT,
     },
-    .joypad_configuration = {
-        13,
-        14,
-        11,
-        12,
-        0,
-        1,
-        9,
-        8,
-        10,
-        4,
-        -1,
-        5,
-    },
-    .joypad_axises = {
-        0,
-        1,
-    },
+
     .color_correction_mode = GB_COLOR_CORRECTION_EMULATE_HARDWARE,
     .highpass_mode = GB_HIGHPASS_ACCURATE,
     .scaling_mode = GB_SDL_SCALING_INTEGER_FACTOR,
@@ -93,7 +56,7 @@ configuration_t configuration =
 };
 
 
-static const char *help[] ={
+/*static const char *help[] ={
 "Drop a GB or GBC ROM\n"
 "file to play.\n"
 "\n"
@@ -110,44 +73,13 @@ static const char *help[] ={
 " Mute/Unmute:       " MODIFIER_NAME "+M\n"
 #endif
 " Break Debugger:    " CTRL_STRING "+C"
-};
+};*/
 
 void update_viewport(void)
 {
-    int win_width, win_height;
-    SDL_GL_GetDrawableSize(window, &win_width, &win_height);
-    double x_factor = win_width / 160.0;
-    double y_factor = win_height / 144.0;
-    
-    if (configuration.scaling_mode == GB_SDL_SCALING_INTEGER_FACTOR) {
-        x_factor = (int)(x_factor);
-        y_factor = (int)(y_factor);
-    }
-    
-    if (configuration.scaling_mode != GB_SDL_SCALING_ENTIRE_WINDOW) {
-        if (x_factor > y_factor) {
-            x_factor = y_factor;
-        }
-        else {
-            y_factor = x_factor;
-        }
-    }
-    
-    unsigned new_width = x_factor * 160;
-    unsigned new_height = y_factor * 144;
-    
-    rect = (SDL_Rect){(win_width  - new_width) / 2, (win_height - new_height) /2,
-        new_width, new_height};
-    
-    if (renderer) {
-        SDL_RenderSetViewport(renderer, &rect);
-    }
-    else {
-        glViewport(rect.x, rect.y, rect.w, rect.h);
-    }
 }
 
-/* Does NOT check for bounds! */
+/* Does NOT check for bounds! *//*
 static void draw_char(uint32_t *buffer, unsigned char ch, uint32_t color)
 {
     if (ch < ' ' || ch > font_max) {
@@ -165,8 +97,8 @@ static void draw_char(uint32_t *buffer, unsigned char ch, uint32_t color)
         }
         buffer += 160 - GLYPH_WIDTH;
     }
-}
-
+}*/
+/*
 static void draw_unbordered_text(uint32_t *buffer, unsigned x, unsigned y, const char *string, uint32_t color)
 {
     unsigned orig_x = x;
@@ -186,8 +118,8 @@ static void draw_unbordered_text(uint32_t *buffer, unsigned x, unsigned y, const
         x += GLYPH_WIDTH;
         string++;
     }
-}
-
+}*/
+/*
 static void draw_text(uint32_t *buffer, unsigned x, unsigned y, const char *string, uint32_t color, uint32_t border)
 {
     draw_unbordered_text(buffer, x - 1, y, string, border);
@@ -195,14 +127,14 @@ static void draw_text(uint32_t *buffer, unsigned x, unsigned y, const char *stri
     draw_unbordered_text(buffer, x, y - 1, string, border);
     draw_unbordered_text(buffer, x, y + 1, string, border);
     draw_unbordered_text(buffer, x, y, string, color);
-}
+}*/
 
 enum decoration {
     DECORATION_NONE,
     DECORATION_SELECTION,
     DECORATION_ARROWS,
 };
-
+/*
 static void draw_text_centered(uint32_t *buffer, unsigned y, const char *string, uint32_t color, uint32_t border, enum decoration decoration)
 {
     unsigned x = 160 / 2 - (unsigned) strlen(string) * GLYPH_WIDTH / 2;
@@ -220,7 +152,7 @@ static void draw_text_centered(uint32_t *buffer, unsigned y, const char *string,
             break;
     }
 }
-
+*/
 struct menu_item {
     const char *string;
     void (*handler)(unsigned);
@@ -239,8 +171,6 @@ static enum {
     WAITING_FOR_JBUTTON,
 } gui_state;
 
-static unsigned joypad_configuration_progress = 0;
-static uint8_t joypad_axis_temp;
 
 static void item_exit(unsigned index)
 {
@@ -317,28 +247,10 @@ static const char *rewind_strings[] = {"Disabled",
 
 static void cycle_rewind(unsigned index)
 {
-    for (unsigned i = 0; i < sizeof(rewind_lengths) / sizeof(rewind_lengths[0]) - 1; i++) {
-        if (configuration.rewind_length == rewind_lengths[i]) {
-            configuration.rewind_length = rewind_lengths[i + 1];
-            GB_set_rewind_length(&gb, configuration.rewind_length);
-            return;
-        }
-    }
-    configuration.rewind_length = rewind_lengths[0];
-    GB_set_rewind_length(&gb, configuration.rewind_length);
 }
 
 static void cycle_rewind_backwards(unsigned index)
 {
-    for (unsigned i = 1; i < sizeof(rewind_lengths) / sizeof(rewind_lengths[0]); i++) {
-        if (configuration.rewind_length == rewind_lengths[i]) {
-            configuration.rewind_length = rewind_lengths[i - 1];
-            GB_set_rewind_length(&gb, configuration.rewind_length);
-            return;
-        }
-    }
-    configuration.rewind_length = rewind_lengths[sizeof(rewind_lengths) / sizeof(rewind_lengths[0]) - 1];
-    GB_set_rewind_length(&gb, configuration.rewind_length);
 }
 
 const char *current_rewind_string(unsigned index)
@@ -453,10 +365,6 @@ static void cycle_filter(unsigned index)
     }
     
     strcpy(configuration.filter, shaders[i].file_name);
-    free_shader(&shader);
-    if (!init_shader_with_name(&shader, configuration.filter)) {
-        init_shader_with_name(&shader, "NearestNeighbor");
-    }
 }
 
 static void cycle_filter_backwards(unsigned index)
@@ -474,10 +382,6 @@ static void cycle_filter_backwards(unsigned index)
     }
     
     strcpy(configuration.filter, shaders[i].file_name);
-    free_shader(&shader);
-    if (!init_shader_with_name(&shader, configuration.filter)) {
-        init_shader_with_name(&shader, "NearestNeighbor");
-    }
 
 }
 const char *current_filter_name(unsigned index)
@@ -589,13 +493,14 @@ static const struct menu_item controls_menu_2[] = {
 
 static const char *key_name(unsigned index)
 {
-    if (current_menu == controls_menu_2) {
+    /*if (current_menu == controls_menu_2) {
         if (index == 0) {
             return SDL_GetScancodeName(configuration.keys[8]);
         }
         return SDL_GetScancodeName(configuration.keys_2[index - 1]);
     }
-    return SDL_GetScancodeName(configuration.keys[index]);
+    return SDL_GetScancodeName(configuration.keys[index]);*/
+    return " ";
 }
 
 static void enter_controls_menu(unsigned index)
@@ -610,86 +515,14 @@ static void enter_controls_menu_2(unsigned index)
     current_selection = 0;
 }
 
-static unsigned joypad_index = 0;
-static SDL_Joystick *joystick = NULL;
-static SDL_GameController *controller = NULL;
 
 const char *current_joypad_name(unsigned index)
 {
-    static char name[23] = {0,};
-    const char *orig_name = joystick? SDL_JoystickName(joystick) : NULL;
-    if (!orig_name) return "Not Found";
-    unsigned i = 0;
-    
-    // SDL returns a name with repeated and trailing spaces
-    while (*orig_name && i < sizeof(name) - 2) {
-        if (orig_name[0] != ' ' || orig_name[1] != ' ') {
-            name[i++] = *orig_name;
-        }
-        orig_name++;
-    }
-    if (i && name[i - 1] == ' ') {
-        i--;
-    }
-    name[i] = 0;
-    
-    return name;
-}
 
-static void cycle_joypads(unsigned index)
-{
-    joypad_index++;
-    if (joypad_index >= SDL_NumJoysticks()) {
-        joypad_index = 0;
-    }
-    if (controller) {
-        SDL_GameControllerClose(controller);
-        controller = NULL;
-    }
-    else if (joystick) {
-        SDL_JoystickClose(joystick);
-        joystick = NULL;
-    }
-    if ((controller = SDL_GameControllerOpen(joypad_index))){
-        joystick = SDL_GameControllerGetJoystick(controller);
-    }
-    else {
-        joystick = SDL_JoystickOpen(joypad_index);
-    }
-}
-
-static void cycle_joypads_backwards(unsigned index)
-{
-    joypad_index++;
-    if (joypad_index >= SDL_NumJoysticks()) {
-        joypad_index = SDL_NumJoysticks() - 1;
-    }
-    if (controller) {
-        SDL_GameControllerClose(controller);
-        controller = NULL;
-    }
-    else if (joystick) {
-        SDL_JoystickClose(joystick);
-        joystick = NULL;
-    }
-    if ((controller = SDL_GameControllerOpen(joypad_index))){
-        joystick = SDL_GameControllerGetJoystick(controller);
-    }
-    else {
-        joystick = SDL_JoystickOpen(joypad_index);
-    }
-}
-
-static void detect_joypad_layout(unsigned index)
-{
-    gui_state = WAITING_FOR_JBUTTON;
-    joypad_configuration_progress = 0;
-    joypad_axis_temp = -1;
+    return "";
 }
 
 static const struct menu_item joypad_menu[] = {
-    {"Joypad:", cycle_joypads, current_joypad_name, cycle_joypads_backwards},
-    {"Configure layout", detect_joypad_layout},
     {"Back", return_to_root_menu},
     {NULL,}
 };
@@ -700,142 +533,18 @@ static void enter_joypad_menu(unsigned index)
     current_selection = 0;
 }
 
-joypad_button_t get_joypad_button(uint8_t physical_button)
-{
-    for (unsigned i = 0; i < JOYPAD_BUTTONS_MAX; i++) {
-        if (configuration.joypad_configuration[i] == physical_button) {
-            return i;
-        }
-    }
-    return JOYPAD_BUTTONS_MAX;
-}
-
-joypad_axis_t get_joypad_axis(uint8_t physical_axis)
-{
-    for (unsigned i = 0; i < JOYPAD_AXISES_MAX; i++) {
-        if (configuration.joypad_axises[i] == physical_axis) {
-            return i;
-        }
-    }
-    return JOYPAD_AXISES_MAX;
-}
-
 
 extern void set_filename(const char *new_filename, bool new_should_free);
 void run_gui(bool is_running)
 {
-    if (joystick && !SDL_NumJoysticks()) {
-        if (controller) {
-            SDL_GameControllerClose(controller);
-            controller = NULL;
-            joystick = NULL;
-        }
-        else {
-            SDL_JoystickClose(joystick);
-            joystick = NULL;
-        }
-    }
-    else if (!joystick && SDL_NumJoysticks()) {
-        if ((controller = SDL_GameControllerOpen(0))){
-            joystick = SDL_GameControllerGetJoystick(controller);
-        }
-        else {
-            joystick = SDL_JoystickOpen(0);
-        }
-    }
     /* Draw the background screen */
-    static SDL_Surface *converted_background = NULL;
-    if (!converted_background) {
-        SDL_Surface *background = SDL_LoadBMP(executable_relative_path("background.bmp"));
-        SDL_SetPaletteColors(background->format->palette, gui_palette, 0, 4);
-        converted_background = SDL_ConvertSurface(background, pixel_format, 0);
-        SDL_LockSurface(converted_background);
-        SDL_FreeSurface(background);
-        
-        for (unsigned i = 4; i--; ) {
-            gui_palette_native[i] = SDL_MapRGB(pixel_format, gui_palette[i].r, gui_palette[i].g, gui_palette[i].b);
-        }
-    }
-
-    uint32_t pixels[160 * 144];
+    uint16_t pixels[160 * 144];
     SDL_Event event = {0,};
     gui_state = is_running? SHOWING_MENU : SHOWING_DROP_MESSAGE;
     bool should_render = true;
     current_menu = root_menu = is_running? paused_menu : nonpaused_menu;
     current_selection = 0;
     do {
-        /* Convert Joypad events (We only generate down events) */
-        if (gui_state != WAITING_FOR_KEY && gui_state != WAITING_FOR_JBUTTON) {
-            switch (event.type) {
-                case SDL_JOYBUTTONDOWN:
-                    event.type = SDL_KEYDOWN;
-                    joypad_button_t button = get_joypad_button(event.jbutton.button);
-                    if (button == JOYPAD_BUTTON_A) {
-                        event.key.keysym.scancode = SDL_SCANCODE_RETURN;
-                    }
-                    else if (button == JOYPAD_BUTTON_MENU) {
-                        event.key.keysym.scancode = SDL_SCANCODE_ESCAPE;
-                    }
-                    else if (button == JOYPAD_BUTTON_UP) event.key.keysym.scancode = SDL_SCANCODE_UP;
-                    else if (button == JOYPAD_BUTTON_DOWN) event.key.keysym.scancode = SDL_SCANCODE_DOWN;
-                    else if (button == JOYPAD_BUTTON_LEFT) event.key.keysym.scancode = SDL_SCANCODE_LEFT;
-                    else if (button == JOYPAD_BUTTON_RIGHT) event.key.keysym.scancode = SDL_SCANCODE_RIGHT;
-                    break;
-
-                case SDL_JOYHATMOTION: {
-                    uint8_t value = event.jhat.value;
-                    if (value != 0) {
-                        uint32_t scancode =
-                            value == SDL_HAT_UP ? SDL_SCANCODE_UP
-                            : value == SDL_HAT_DOWN ? SDL_SCANCODE_DOWN
-                            : value == SDL_HAT_LEFT ? SDL_SCANCODE_LEFT
-                            : value == SDL_HAT_RIGHT ? SDL_SCANCODE_RIGHT
-                            : 0;
-
-                        if (scancode != 0) {
-                            event.type = SDL_KEYDOWN;
-                            event.key.keysym.scancode = scancode;
-                        }
-                    }
-               }
-                    
-                case SDL_JOYAXISMOTION: {
-                    static bool axis_active[2] = {false, false};
-                    joypad_axis_t axis = get_joypad_axis(event.jaxis.axis);
-                    if (axis == JOYPAD_AXISES_X) {
-                        if (!axis_active[0] && event.jaxis.value > JOYSTICK_HIGH) {
-                            axis_active[0] = true;
-                            event.type = SDL_KEYDOWN;
-                            event.key.keysym.scancode = SDL_SCANCODE_RIGHT;
-                        }
-                        else if (!axis_active[0] && event.jaxis.value < -JOYSTICK_HIGH) {
-                            axis_active[0] = true;
-                            event.type = SDL_KEYDOWN;
-                            event.key.keysym.scancode = SDL_SCANCODE_LEFT;
-                            
-                        }
-                        else if (axis_active[0] && event.jaxis.value < JOYSTICK_LOW && event.jaxis.value > -JOYSTICK_LOW) {
-                            axis_active[0] = false;
-                        }
-                    }
-                    else if (axis == JOYPAD_AXISES_Y) {
-                        if (!axis_active[1] && event.jaxis.value > JOYSTICK_HIGH) {
-                            axis_active[1] = true;
-                            event.type = SDL_KEYDOWN;
-                            event.key.keysym.scancode = SDL_SCANCODE_DOWN;
-                        }
-                        else if (!axis_active[1] && event.jaxis.value < -JOYSTICK_HIGH) {
-                            axis_active[1] = true;
-                            event.type = SDL_KEYDOWN;
-                            event.key.keysym.scancode = SDL_SCANCODE_UP;
-                        }
-                        else if (axis_active[1] && event.jaxis.value < JOYSTICK_LOW && event.jaxis.value > -JOYSTICK_LOW) {
-                            axis_active[1] = false;
-                        }
-                    }
-                }
-            }
-        }
         switch (event.type) {
             case SDL_QUIT: {
                 if (!is_running) {
@@ -847,68 +556,8 @@ void run_gui(bool is_running)
                 }
                 
             }
-            case SDL_WINDOWEVENT: {
-                if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
-                    update_viewport();
-                    render_texture(NULL, NULL);
-                }
-                break;
-            }
-            case SDL_DROPFILE: {
-                set_filename(event.drop.file, true);
-                pending_command = GB_SDL_NEW_FILE_COMMAND;
-                return;
-            }
-            case SDL_JOYBUTTONDOWN:
-            {
-                if (gui_state == WAITING_FOR_JBUTTON && joypad_configuration_progress != JOYPAD_BUTTONS_MAX) {
-                    should_render = true;
-                    configuration.joypad_configuration[joypad_configuration_progress++] = event.jbutton.button;
-                }
-                break;
-            }
-                
-            case SDL_JOYAXISMOTION: {
-                if (gui_state == WAITING_FOR_JBUTTON &&
-                    joypad_configuration_progress == JOYPAD_BUTTONS_MAX &&
-                    abs(event.jaxis.value) >= 0x4000) {
-                    if (joypad_axis_temp == (uint8_t)-1) {
-                        joypad_axis_temp = event.jaxis.axis;
-                    }
-                    else if (joypad_axis_temp != event.jaxis.axis) {
-                        if (joypad_axis_temp < event.jaxis.axis) {
-                            configuration.joypad_axises[JOYPAD_AXISES_X] = joypad_axis_temp;
-                            configuration.joypad_axises[JOYPAD_AXISES_Y] = event.jaxis.axis;
-                        }
-                        else {
-                            configuration.joypad_axises[JOYPAD_AXISES_Y] = joypad_axis_temp;
-                            configuration.joypad_axises[JOYPAD_AXISES_X] = event.jaxis.axis;
-                        }
-                        
-                        gui_state = SHOWING_MENU;
-                        should_render = true;
-                    }
-                }
-                break;
-            }
-
             case SDL_KEYDOWN:
-                if (event.key.keysym.scancode == SDL_SCANCODE_RETURN && gui_state == WAITING_FOR_JBUTTON) {
-                    should_render = true;
-                    if (joypad_configuration_progress != JOYPAD_BUTTONS_MAX) {
-                        configuration.joypad_configuration[joypad_configuration_progress] = -1;
-                    }
-                    else {
-                        configuration.joypad_axises[0] = -1;
-                        configuration.joypad_axises[1] = -1;
-                    }
-                    joypad_configuration_progress++;
-                    
-                    if (joypad_configuration_progress > JOYPAD_BUTTONS_MAX) {
-                        gui_state = SHOWING_MENU;
-                    }
-                }
-                else if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
+                if (event.key.keysym.sym == SDLK_ESCAPE) {
                     if (is_running) {
                         return;
                     }
@@ -925,15 +574,15 @@ void run_gui(bool is_running)
                     }
                 }
                 else if (gui_state == SHOWING_MENU) {
-                    if (event.key.keysym.scancode == SDL_SCANCODE_DOWN && current_menu[current_selection + 1].string) {
+                    if (event.key.keysym.sym == SDLK_DOWN && current_menu[current_selection + 1].string) {
                         current_selection++;
                         should_render = true;
                     }
-                    else if (event.key.keysym.scancode == SDL_SCANCODE_UP && current_selection) {
+                    else if (event.key.keysym.sym == SDLK_UP && current_selection) {
                         current_selection--;
                         should_render = true;
                     }
-                    else if (event.key.keysym.scancode == SDL_SCANCODE_RETURN  && !current_menu[current_selection].backwards_handler) {
+                    else if (event.key.keysym.sym == SDLK_RETURN  && !current_menu[current_selection].backwards_handler) {
                         if (current_menu[current_selection].handler) {
                             current_menu[current_selection].handler(current_selection);
                             if (pending_command == GB_SDL_RESET_COMMAND && !is_running) {
@@ -951,33 +600,33 @@ void run_gui(bool is_running)
                             return;
                         }
                     }
-                    else if (event.key.keysym.scancode == SDL_SCANCODE_RIGHT && current_menu[current_selection].backwards_handler) {
+                    else if (event.key.keysym.sym == SDLK_RIGHT && current_menu[current_selection].backwards_handler) {
                         current_menu[current_selection].handler(current_selection);
                         should_render = true;
                     }
-                    else if (event.key.keysym.scancode == SDL_SCANCODE_LEFT && current_menu[current_selection].backwards_handler) {
+                    else if (event.key.keysym.sym == SDLK_LEFT && current_menu[current_selection].backwards_handler) {
                         current_menu[current_selection].backwards_handler(current_selection);
                         should_render = true;
                     }
                 }
                 else if (gui_state == SHOWING_HELP) {
                     current_help_page++;
-                    if (current_help_page == sizeof(help) / sizeof(help[0])) {
+                    /*if (current_help_page == sizeof(help) / sizeof(help[0])) {
                         gui_state = SHOWING_MENU;
-                    }
+                    }*/
                     should_render = true;
                 }
                 else if (gui_state == WAITING_FOR_KEY) {
                     if (current_menu == controls_menu_2) {
                         if (current_selection == 0) {
-                            configuration.keys[8] = event.key.keysym.scancode;
+                            configuration.keys[8] = event.key.keysym.sym;
                         }
                         else {
-                            configuration.keys_2[current_selection - 1] = event.key.keysym.scancode;
+                            configuration.keys_2[current_selection - 1] = event.key.keysym.sym;
                         }
                     }
                     else {
-                        configuration.keys[current_selection] = event.key.keysym.scancode;
+                        configuration.keys[current_selection] = event.key.keysym.sym;
                     }
                     gui_state = SHOWING_MENU;
                     should_render = true;
@@ -987,16 +636,16 @@ void run_gui(bool is_running)
         
         if (should_render) {
             should_render = false;
-            memcpy(pixels, converted_background->pixels, sizeof(pixels));
+            //memcpy(pixels, converted_background->pixels, sizeof(pixels));
             
             switch (gui_state) {
                 case SHOWING_DROP_MESSAGE:
-                    draw_text_centered(pixels, 8, "Press ESC for menu", gui_palette_native[3], gui_palette_native[0], false);
+                   /* draw_text_centered(pixels, 8, "Press ESC for menu", gui_palette_native[3], gui_palette_native[0], false);
                     draw_text_centered(pixels, 116, "Drop a GB or GBC", gui_palette_native[3], gui_palette_native[0], false);
-                    draw_text_centered(pixels, 128, "file to play", gui_palette_native[3], gui_palette_native[0], false);
+                    draw_text_centered(pixels, 128, "file to play", gui_palette_native[3], gui_palette_native[0], false);*/
                     break;
                 case SHOWING_MENU:
-                    draw_text_centered(pixels, 8, "SameBoy", gui_palette_native[3], gui_palette_native[0], false);
+                    /*draw_text_centered(pixels, 8, "SameBoy", gui_palette_native[3], gui_palette_native[0], false);
                     unsigned i = 0, y = 24;
                     for (const struct menu_item *item = current_menu; item->string; item++, i++) {
                         if (item->value_getter && !item->backwards_handler) {
@@ -1017,38 +666,16 @@ void run_gui(bool is_running)
                                 y += 12;
                             }
                         }
-                    }
+                    }*/
                     break;
                 case SHOWING_HELP:
-                    draw_text(pixels, 2, 2, help[current_help_page], gui_palette_native[3], gui_palette_native[0]);
+                   // draw_text(pixels, 2, 2, help[current_help_page], gui_palette_native[3], gui_palette_native[0]);
                     break;
                 case WAITING_FOR_KEY:
-                    draw_text_centered(pixels, 68, "Press a Key", gui_palette_native[3], gui_palette_native[0], DECORATION_NONE);
+                    //draw_text_centered(pixels, 68, "Press a Key", gui_palette_native[3], gui_palette_native[0], DECORATION_NONE);
                     break;
-                case WAITING_FOR_JBUTTON:
-                    draw_text_centered(pixels, 68,
-                                       joypad_configuration_progress != JOYPAD_BUTTONS_MAX ? "Press button for" : "Move the Analog Stick",
-                                       gui_palette_native[3], gui_palette_native[0], DECORATION_NONE);
-                    draw_text_centered(pixels, 80,
-                                      (const char *[])
-                                       {
-                                           "Right",
-                                           "Left",
-                                           "Up",
-                                           "Down",
-                                           "A",
-                                           "B",
-                                           "Select",
-                                           "Start",
-                                           "Open Menu",
-                                           "Turbo",
-                                           "Rewind",
-                                           "Slow-Motion",
-                                           "",
-                                       } [joypad_configuration_progress],
-                                       gui_palette_native[3], gui_palette_native[0], DECORATION_NONE);
-                    draw_text_centered(pixels, 104, "Press Enter to skip", gui_palette_native[3], gui_palette_native[0], DECORATION_NONE);
-                    break;
+               case WAITING_FOR_JBUTTON:
+               break;
             }
             
             render_texture(pixels, NULL);

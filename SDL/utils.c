@@ -1,18 +1,18 @@
-#include <SDL2/SDL.h>
 #include <stdio.h>
 #include <string.h>
 #include "utils.h"
 
 const char *executable_folder(void)
 {
-    static const char *ret = NULL;
+    /*static const char *ret = NULL;
     if (!ret) {
         ret = SDL_GetBasePath();
         if (!ret) {
             ret = "./";
         }
-    }
-    return ret;
+    }*/
+    
+    return "./";
 }
 
 char *executable_relative_path(const char *filename)

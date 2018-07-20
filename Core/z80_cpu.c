@@ -184,7 +184,7 @@ static void flush_pending_cycles(GB_gameboy_t *gb)
 
 static void ill(GB_gameboy_t *gb, uint8_t opcode)
 {
-    GB_log(gb, "Illegal Opcode. Halting.\n");
+    printf( "Illegal Opcode. Halting.\n");
     gb->interrupt_enable = 0;
     gb->halted = true;
 }
@@ -849,7 +849,6 @@ static void jp_a16(GB_gameboy_t *gb, uint8_t opcode)
 
 static void call_cc_a16(GB_gameboy_t *gb, uint8_t opcode)
 {
-    uint16_t call_addr = gb->pc - 1;
     uint16_t addr = cycle_read_inc_oam_bug(gb, gb->pc++);
     addr |= (cycle_read_inc_oam_bug(gb, gb->pc++) << 8);
     if (condition_code(gb, opcode)) {
@@ -857,8 +856,6 @@ static void call_cc_a16(GB_gameboy_t *gb, uint8_t opcode)
         cycle_write(gb, --gb->registers[GB_REGISTER_SP], (gb->pc) >> 8);
         cycle_write(gb, --gb->registers[GB_REGISTER_SP], (gb->pc) & 0xFF);
         gb->pc = addr;
-
-        GB_debugger_call_hook(gb, call_addr);
     }
 }
 
@@ -996,17 +993,14 @@ static void cp_a_d8(GB_gameboy_t *gb, uint8_t opcode)
 
 static void rst(GB_gameboy_t *gb, uint8_t opcode)
 {
-    uint16_t call_addr = gb->pc - 1;
     cycle_oam_bug(gb, GB_REGISTER_SP);
     cycle_write(gb, --gb->registers[GB_REGISTER_SP], (gb->pc) >> 8);
     cycle_write(gb, --gb->registers[GB_REGISTER_SP], (gb->pc) & 0xFF);
     gb->pc = opcode ^ 0xC7;
-    GB_debugger_call_hook(gb, call_addr);
 }
 
 static void ret(GB_gameboy_t *gb, uint8_t opcode)
 {
-    GB_debugger_ret_hook(gb);
     gb->pc = cycle_read_inc_oam_bug(gb, gb->registers[GB_REGISTER_SP]++);
     gb->pc |= cycle_read(gb, gb->registers[GB_REGISTER_SP]++) << 8;
     cycle_no_access(gb);
@@ -1031,14 +1025,12 @@ static void ret_cc(GB_gameboy_t *gb, uint8_t opcode)
 
 static void call_a16(GB_gameboy_t *gb, uint8_t opcode)
 {
-    uint16_t call_addr = gb->pc - 1;
     uint16_t addr = cycle_read_inc_oam_bug(gb, gb->pc++);
     addr |= (cycle_read_inc_oam_bug(gb, gb->pc++) << 8);
     cycle_oam_bug(gb, GB_REGISTER_SP);
     cycle_write(gb, --gb->registers[GB_REGISTER_SP], (gb->pc) >> 8);
     cycle_write(gb, --gb->registers[GB_REGISTER_SP], (gb->pc) & 0xFF);
     gb->pc = addr;
-    GB_debugger_call_hook(gb, call_addr);
 }
 
 static void ld_da8_a(GB_gameboy_t *gb, uint8_t opcode)
@@ -1407,7 +1399,6 @@ void GB_cpu_run(GB_gameboy_t *gb)
     /* Call interrupt */
     else if (effecitve_ime && interrupt_queue) {
         gb->halted = false;
-        uint16_t call_addr = gb->pc;
         
         cycle_no_access(gb);
         cycle_no_access(gb);
@@ -1432,7 +1423,6 @@ void GB_cpu_run(GB_gameboy_t *gb)
             gb->pc = 0;
         }
         gb->ime = false;
-        GB_debugger_call_hook(gb, call_addr);
     }
     /* Run mode */
     else if(!gb->halted) {

@@ -5,50 +5,11 @@
 #include <string.h>
 #include <errno.h>
 #include <stdarg.h>
-#ifndef _WIN32
 #include <sys/select.h>
 #include <unistd.h>
-#endif
 #include "gb.h"
 
-#ifdef DISABLE_REWIND
-#define GB_rewind_free(...)
-#define GB_rewind_push(...)
-#endif
 
-void GB_attributed_logv(GB_gameboy_t *gb, GB_log_attributes attributes, const char *fmt, va_list args)
-{
-    char *string = NULL;
-    vasprintf(&string, fmt, args);
-    if (string) {
-        if (gb->log_callback) {
-            gb->log_callback(gb, string, attributes);
-        }
-        else {
-            /* Todo: Add ANSI escape sequences for attributed text */
-            printf("%s", string);
-        }
-    }
-    free(string);
-}
-
-void GB_attributed_log(GB_gameboy_t *gb, GB_log_attributes attributes, const char *fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    GB_attributed_logv(gb, attributes, fmt, args);
-    va_end(args);
-}
-
-void GB_log(GB_gameboy_t *gb, const char *fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    GB_attributed_logv(gb, 0, fmt, args);
-    va_end(args);
-}
-
-#ifndef DISABLE_DEBUGGER
 static char *default_input_callback(GB_gameboy_t *gb)
 {
     char *expression = NULL;
@@ -73,22 +34,8 @@ static char *default_input_callback(GB_gameboy_t *gb)
 
 static char *default_async_input_callback(GB_gameboy_t *gb)
 {
-#ifndef _WIN32
-    fd_set set;
-    FD_ZERO(&set);
-    FD_SET(STDIN_FILENO, &set);
-    struct timeval time = {0,};
-    if (select(1, &set, NULL, NULL, &time) == 1) {
-        if (feof(stdin)) {
-            GB_set_async_input_callback(gb, NULL); /* Disable async input */
-            return NULL;
-        }
-        return default_input_callback(gb);
-    }
-#endif
     return NULL;
 }
-#endif
 
 void GB_init(GB_gameboy_t *gb, GB_model_t model)
 {
@@ -103,10 +50,9 @@ void GB_init(GB_gameboy_t *gb, GB_model_t model)
         gb->vram = malloc(gb->vram_size = 0x2000);
     }
 
-#ifndef DISABLE_DEBUGGER
     gb->input_callback = default_input_callback;
     gb->async_input_callback = default_async_input_callback;
-#endif
+
     gb->cartridge_type = &GB_cart_defs[0]; // Default cartridge type
     gb->clock_multiplier = 1.0;
     
@@ -139,10 +85,6 @@ void GB_free(GB_gameboy_t *gb)
     if (gb->breakpoints) {
         free(gb->breakpoints);
     }
-#ifndef DISABLE_DEBUGGER
-    GB_debugger_clear_symbols(gb);
-#endif
-    GB_rewind_free(gb);
     memset(gb, 0, sizeof(*gb));
 }
 
@@ -150,7 +92,7 @@ int GB_load_boot_rom(GB_gameboy_t *gb, const char *path)
 {
     FILE *f = fopen(path, "rb");
     if (!f) {
-        GB_log(gb, "Could not open boot ROM: %s.\n", strerror(errno));
+        printf("Could not open boot ROM: %s.\n", strerror(errno));
         return errno;
     }
     fread(gb->boot_rom, sizeof(gb->boot_rom), 1, f);
@@ -171,7 +113,7 @@ int GB_load_rom(GB_gameboy_t *gb, const char *path)
 {
     FILE *f = fopen(path, "rb");
     if (!f) {
-        GB_log(gb, "Could not open ROM: %s.\n", strerror(errno));
+        printf("Could not open ROM: %s.\n", strerror(errno));
         return errno;
     }
     fseek(f, 0, SEEK_END);
@@ -201,7 +143,7 @@ int GB_save_battery(GB_gameboy_t *gb, const char *path)
     if (gb->mbc_ram_size == 0 && !gb->cartridge_type->has_rtc) return 0; /* Claims to have battery, but has no RAM or RTC */
     FILE *f = fopen(path, "wb");
     if (!f) {
-        GB_log(gb, "Could not open battery save: %s.\n", strerror(errno));
+        printf("Could not open battery save: %s.\n", strerror(errno));
         return errno;
     }
 
@@ -267,14 +209,11 @@ exit:
 
 uint8_t GB_run(GB_gameboy_t *gb)
 {
-    GB_debugger_run(gb);
     gb->cycles_since_run = 0;
     GB_cpu_run(gb);
     if (gb->vblank_just_occured) {
         GB_update_joyp(gb);
         GB_rtc_run(gb);
-        GB_debugger_handle_async_commands(gb);
-        GB_rewind_push(gb);
     }
     return gb->cycles_since_run;
 }
@@ -299,7 +238,7 @@ uint64_t GB_run_frame(GB_gameboy_t *gb)
     return gb->cycles_since_last_sync * 1000000000LL / 2 / GB_get_clock_rate(gb); /* / 2 because we use 8MHz units */
 }
 
-void GB_set_pixels_output(GB_gameboy_t *gb, uint32_t *output)
+void GB_set_pixels_output(GB_gameboy_t *gb, uint16_t *output)
 {
     gb->screen = output;
 }
@@ -309,26 +248,18 @@ void GB_set_vblank_callback(GB_gameboy_t *gb, GB_vblank_callback_t callback)
     gb->vblank_callback = callback;
 }
 
-void GB_set_log_callback(GB_gameboy_t *gb, GB_log_callback_t callback)
-{
-    gb->log_callback = callback;
-}
 
 void GB_set_input_callback(GB_gameboy_t *gb, GB_input_callback_t callback)
 {
-#ifndef DISABLE_DEBUGGER
     if (gb->input_callback == default_input_callback) {
         gb->async_input_callback = NULL;
     }
     gb->input_callback = callback;
-#endif
 }
 
 void GB_set_async_input_callback(GB_gameboy_t *gb, GB_input_callback_t callback)
 {
-#ifndef DISABLE_DEBUGGER
     gb->async_input_callback = callback;
-#endif
 }
 
 
@@ -362,7 +293,6 @@ void GB_set_infrared_input(GB_gameboy_t *gb, bool state)
 void GB_queue_infrared_input(GB_gameboy_t *gb, bool state, long cycles_after_previous_change)
 {
     if (gb->ir_queue_length == GB_MAX_IR_QUEUE) {
-        GB_log(gb, "IR Queue is full\n");
         return;
     }
     gb->ir_queue[gb->ir_queue_length++] = (GB_ir_queue_item_t){state, cycles_after_previous_change};
@@ -387,7 +317,6 @@ uint8_t GB_serial_get_data(GB_gameboy_t *gb)
 {
     if (gb->io_registers[GB_IO_SC] & 1) {
         /* Internal Clock */
-        GB_log(gb, "Serial read request while using internal clock. \n");
         return 0xFF;
     }
     return gb->io_registers[GB_IO_SB];
@@ -396,7 +325,6 @@ void GB_serial_set_data(GB_gameboy_t *gb, uint8_t data)
 {
     if (gb->io_registers[GB_IO_SC] & 1) {
         /* Internal Clock */
-        GB_log(gb, "Serial write request while using internal clock. \n");
         return;
     }
     gb->io_registers[GB_IO_SB] = data;
@@ -551,7 +479,6 @@ void GB_switch_model_and_reset(GB_gameboy_t *gb, GB_model_t model)
         gb->ram = realloc(gb->ram, gb->ram_size = 0x2000);
         gb->vram = realloc(gb->vram, gb->vram_size = 0x2000);
     }
-    GB_rewind_free(gb);
     GB_reset(gb);
 }
 

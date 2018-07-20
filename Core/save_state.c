@@ -22,7 +22,7 @@ int GB_save_state(GB_gameboy_t *gb, const char *path)
 {
     FILE *f = fopen(path, "wb");
     if (!f) {
-        GB_log(gb, "Could not open save state: %s.\n", strerror(errno));
+        printf("Could not open save state: %s.\n", strerror(errno));
         return errno;
     }
     
@@ -133,27 +133,27 @@ static bool read_section(FILE *f, void *dest, uint32_t size)
 static bool verify_state_compatibility(GB_gameboy_t *gb, GB_gameboy_t *save)
 {
     if (gb->magic != save->magic) {
-        GB_log(gb, "File is not a save state, or is from an incompatible operating system.\n");
+        printf( "File is not a save state, or is from an incompatible operating system.\n");
         return false;
     }
     
     if (gb->version != save->version) {
-        GB_log(gb, "Save state is for a different version of SameBoy.\n");
+        printf( "Save state is for a different version of SameBoy.\n");
         return false;
     }
     
     if (gb->mbc_ram_size < save->mbc_ram_size) {
-        GB_log(gb, "Save state has non-matching MBC RAM size.\n");
+        printf( "Save state has non-matching MBC RAM size.\n");
         return false;
     }
     
     if (gb->ram_size != save->ram_size) {
-        GB_log(gb, "Save state has non-matching RAM size. Try changing emulated model.\n");
+        printf( "Save state has non-matching RAM size. Try changing emulated model.\n");
         return false;
     }
     
     if (gb->vram_size != save->vram_size) {
-        GB_log(gb, "Save state has non-matching VRAM size. Try changing emulated model.\n");
+        printf( "Save state has non-matching VRAM size. Try changing emulated model.\n");
         return false;
     }
     
@@ -171,7 +171,7 @@ int GB_load_state(GB_gameboy_t *gb, const char *path)
     
     FILE *f = fopen(path, "rb");
     if (!f) {
-        GB_log(gb, "Could not open save state: %s.\n", strerror(errno));
+        printf( "Could not open save state: %s.\n", strerror(errno));
         return errno;
     }
     

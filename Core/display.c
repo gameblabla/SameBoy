@@ -160,43 +160,9 @@ uint32_t GB_convert_rgb15(GB_gameboy_t *gb, uint16_t color)
     uint8_t g = (color >> 5) & 0x1F;
     uint8_t b = (color >> 10) & 0x1F;
     
-    if (gb->color_correction_mode == GB_COLOR_CORRECTION_DISABLED) {
-        r = scale_channel(r);
-        g = scale_channel(g);
-        b = scale_channel(b);
-    }
-    else {
-        r = scale_channel_with_curve(r);
-        g = scale_channel_with_curve(g);
-        b = scale_channel_with_curve(b);
-        
-        if (gb->color_correction_mode != GB_COLOR_CORRECTION_CORRECT_CURVES) {
-            uint8_t new_g = (g * 3 + b) / 4;
-            uint8_t new_r = r, new_b = b;
-            if (gb->color_correction_mode == GB_COLOR_CORRECTION_PRESERVE_BRIGHTNESS) {
-                uint8_t old_max = MAX(r, MAX(g, b));
-                uint8_t new_max = MAX(new_r, MAX(new_g, new_b));
-                
-                if (new_max != 0) {
-                    new_r = new_r * old_max / new_max;
-                    new_g = new_g * old_max / new_max;
-                    new_b = new_b * old_max / new_max;
-                }
-                
-                uint8_t old_min = MIN(r, MIN(g, b));
-                uint8_t new_min = MIN(new_r, MIN(new_g, new_b));
-                
-                if (new_min != 0xff) {
-                    new_r = 0xff - (0xff - new_r) * (0xff - old_min) / (0xff - new_min);
-                    new_g = 0xff - (0xff - new_g) * (0xff - old_min) / (0xff - new_min);
-                    new_b = 0xff - (0xff - new_b) * (0xff - old_min) / (0xff - new_min);;
-                }
-            }
-            r = new_r;
-            g = new_g;
-            b = new_b;
-        }
-    }
+	r = scale_channel(r);
+	g = scale_channel(g);
+	b = scale_channel(b);
     
     return gb->rgb_encode_callback(gb, r, g, b);
 }
@@ -208,17 +174,6 @@ void GB_palette_changed(GB_gameboy_t *gb, bool background_palette, uint8_t index
     uint16_t color = palette_data[index & ~1] | (palette_data[index | 1] << 8);
 
     (background_palette? gb->background_palettes_rgb : gb->sprite_palettes_rgb)[index / 2] = GB_convert_rgb15(gb, color);
-}
-
-void GB_set_color_correction_mode(GB_gameboy_t *gb, GB_color_correction_mode_t mode)
-{
-    gb->color_correction_mode = mode;
-    if (GB_is_cgb(gb)) {
-        for (unsigned i = 0; i < 32; i++) {
-            GB_palette_changed(gb, false, i * 2);
-            GB_palette_changed(gb, true, i * 2);
-        }
-    }
 }
 
 /*

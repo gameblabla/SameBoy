@@ -1,13 +1,14 @@
-PRGNAME     = sameboy.elf
+PRGNAME     = sameboy.dge
 
-CC          = gcc
+CC          = /opt/rs97-toolchain/bin/mipsel-linux-gcc
 
 # add SDL dependencies
 SDL_LIB     = 
+SDL_INCLUDE = 
 
 # change compilation / linking flag options
 DEFINES		= -D_GNU_SOURCE -DVERSION="$(VERSION)" -D_USE_MATH_DEFINES -DDISABLE_TIMEKEEPING -DGB_INTERNAL
-CFLAGS		= -Ofast -march=native -mtune=native -fomit-frame-pointer -fdata-sections -ffunction-sections -std=gnu11 $(DEFINES)
+CFLAGS		= -O2 -march=mips32 -mtune=mips32 -mno-shared -mno-mips16 -fdata-sections -ffunction-sections -std=gnu11 $(DEFINES)
 CFLAGS     += -ISDL -ICore -I.
 LDFLAGS     = -lSDL -lm -Wl,--as-needed -Wl,--gc-sections -flto -s
 

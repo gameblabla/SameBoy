@@ -414,9 +414,6 @@ static GB_read_function_t * const read_map[] =
 
 uint8_t GB_read_memory(GB_gameboy_t *gb, uint16_t addr)
 {
-    if (gb->n_watchpoints) {
-        GB_debugger_test_read_watchpoint(gb, addr);
-    }
     if (is_addr_in_dma_use(gb, addr)) {
         addr = gb->dma_current_src;
     }
@@ -496,7 +493,7 @@ static void write_mbc(GB_gameboy_t *gb, uint16_t addr, uint8_t value)
 static void write_vram(GB_gameboy_t *gb, uint16_t addr, uint8_t value)
 {
     if (gb->vram_write_blocked) {
-        //GB_log(gb, "Wrote %02x to %04x (VRAM) during mode 3\n", value, addr);
+        //printf( "Wrote %02x to %04x (VRAM) during mode 3\n", value, addr);
         return;
     }
     gb->vram[(addr & 0x1FFF) + (uint16_t) gb->cgb_vram_bank * 0x2000] = value;
@@ -536,7 +533,7 @@ static void write_banked_ram(GB_gameboy_t *gb, uint16_t addr, uint8_t value)
 static void write_high_memory(GB_gameboy_t *gb, uint16_t addr, uint8_t value)
 {
     if (addr < 0xFE00) {
-        GB_log(gb, "Wrote %02x to %04x (RAM Mirror)\n", value, addr);
+        printf( "Wrote %02x to %04x (RAM Mirror)\n", value, addr);
         gb->ram[addr & 0x0FFF] = value;
         return;
     }
@@ -884,7 +881,7 @@ static void write_high_memory(GB_gameboy_t *gb, uint16_t addr, uint8_t value)
                     GB_apu_write(gb, addr & 0xFF, value);
                     return;
                 }
-                GB_log(gb, "Wrote %02x to %04x (HW Register)\n", value, addr);
+                printf( "Wrote %02x to %04x (HW Register)\n", value, addr);
                 return;
         }
     }
@@ -913,9 +910,6 @@ static GB_write_function_t * const write_map[] =
 
 void GB_write_memory(GB_gameboy_t *gb, uint16_t addr, uint8_t value)
 {
-    if (gb->n_watchpoints) {
-        GB_debugger_test_write_watchpoint(gb, addr, value);
-    }
     if (is_addr_in_dma_use(gb, addr)) {
         /* Todo: What should happen? Will this affect DMA? Will data be written? What and where? */
         return;

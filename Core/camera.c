@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "gb.h"
 
 static int noise_seed = 0;
@@ -134,7 +135,7 @@ void GB_camera_write_register(GB_gameboy_t *gb, uint16_t addr, uint8_t value)
     }
     else {
         if (addr >= 0x36) {
-            GB_log(gb, "Wrote invalid camera register %02x: %2x\n", addr, value);
+            printf( "Wrote invalid camera register %02x: %2x\n", addr, value);
             return;
         }
         gb->camera_registers[addr] = value;

@@ -148,7 +148,6 @@ typedef struct {
 void GB_set_sample_rate(GB_gameboy_t *gb, unsigned int sample_rate);
 void GB_apu_copy_buffer(GB_gameboy_t *gb, GB_sample_t *dest, size_t count);
 size_t GB_apu_get_current_buffer_length(GB_gameboy_t *gb);
-void GB_set_highpass_filter_mode(GB_gameboy_t *gb, GB_highpass_mode_t mode);
 
 #ifdef GB_INTERNAL
 void GB_apu_write(GB_gameboy_t *gb, uint8_t reg, uint8_t value);

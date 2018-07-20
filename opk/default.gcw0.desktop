@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=SameBoy
+Comment=Game Boy emulator
+Exec=sameboy_gcw0.elf %f
+Icon=icon.png
+Terminal=false
+Categories=emulators;
+X-OD-NeedsDownscaling=false

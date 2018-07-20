@@ -1,1 +1,7 @@
 build
+*.o
+*.elf
+*.dge
+*.gb
+*.gbc
+*.bin
