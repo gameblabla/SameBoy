@@ -275,7 +275,13 @@ void GB_set_rgb_encode_callback(GB_gameboy_t *gb, GB_rgb_encode_callback_t callb
         gb->sprite_palettes_rgb[7] = gb->sprite_palettes_rgb[3] = gb->background_palettes_rgb[3] =
         callback(gb, 0, 0, 0);
     }
+
     gb->rgb_encode_callback = callback;
+    
+    for (unsigned i = 0; i < 32; i++) {
+        GB_palette_changed(gb, true, i * 2);
+        GB_palette_changed(gb, false, i * 2);
+    }
 }
 
 void GB_set_infrared_callback(GB_gameboy_t *gb, GB_infrared_callback_t callback)
@@ -393,7 +399,7 @@ static void reset_ram(GB_gameboy_t *gb)
             }
             break;
 #if 0
-        /* Not emulated yet, for documentation only*/
+        /* Not emulated yet, for documentation only */
         case GB_MODEL_SGB2:
             for (unsigned i = 0; i < gb->ram_size; i++) {
                 gb->ram[i] = 0x55;
@@ -416,6 +422,17 @@ static void reset_ram(GB_gameboy_t *gb)
     
     for (unsigned i = 0; i < sizeof(gb->extra_oam); i++) {
         gb->extra_oam[i] = (random() & 0xFF);
+    }
+    
+    if (GB_is_cgb(gb)) {
+        for (unsigned i = 0; i < 64; i++) {
+            gb->background_palettes_data[i] = random() & 0xFF; /* Doesn't really matter as the boot ROM overrides it anyway*/
+            gb->sprite_palettes_data[i] = random() & 0xFF;
+        }
+        for (unsigned i = 0; i < 32; i++) {
+            GB_palette_changed(gb, true, i * 2);
+            GB_palette_changed(gb, false, i * 2);
+        }
     }
 }
 

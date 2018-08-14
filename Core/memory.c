@@ -732,7 +732,7 @@ static void write_high_memory(GB_gameboy_t *gb, uint16_t addr, uint8_t value)
 
             case GB_IO_DMG_EMULATION:
                 if (GB_is_cgb(gb) && !gb->boot_rom_finished) {
-                    gb->cgb_mode = value != 4; /* The real "contents" of this register aren't quite known yet. */
+                    gb->cgb_mode = !(value & 0xC); /* The real "contents" of this register aren't quite known yet. */
                 }
                 return;
 
